@@ -26,7 +26,7 @@ WINDOW *create_win (int sy, int sx, int py, int px)
 }	
 	
 
-int get_dir (char *dname, WINDOW *mywin, char data[128][128])                            //vivod dirrectorii
+int get_dir (char *dname, WINDOW *mywin, char **data)                            //vivod dirrectorii
 {
 	int i;
 	DIR *dir;
@@ -42,28 +42,24 @@ int get_dir (char *dname, WINDOW *mywin, char data[128][128])                   
 
 	for (i = 0; (entry = readdir(dir)) !=NULL; i++)
 	{
-		mvwprintw (mywin, i, 0, "%s", entry->d_name);
+		data[i] = malloc(sizeof(char) * 512);
 		strcpy(data[i], entry->d_name);
 	}
 
-	wattron(mywin, COLOR_PAIR(1));
-	mvwprintw(mywin, 0, 0, data[0]);
-	wattroff(mywin, COLOR_PAIR(1));
-
-
-	wrefresh(mywin);
 	closedir(dir);
 	return i;
 } 
 
-void ref_data(char data[128][128], unsigned count, unsigned select, WINDOW *win)
+void ref_data(char **data, unsigned count, unsigned select, WINDOW *win)
 {
 	for(int i = 0; i< count; i++)
 		mvwprintw(win, i, 0, data[i]);
-
-	wattron(win, COLOR_PAIR(1));
-	mvwprintw(win, select, 0, data[select]);
-	wattroff(win, COLOR_PAIR(1));
+	if(select != -1)
+	{
+		wattron(win, COLOR_PAIR(1));
+		mvwprintw(win, select, 0, data[select]);
+		wattroff(win, COLOR_PAIR(1));
+	}
 	wrefresh(win);
 }	
         
@@ -74,9 +70,17 @@ int main (int argc, char ** argv)
 	WINDOW * win_bl;                            
 	WINDOW * win_r;
 	WINDOW * win_br;
-	char data[128][128];	
+	WINDOW *win_active;
+	char **data_r;
+	char **data_l;
+	char **data_current;
 	unsigned count_l = 0;
-
+	unsigned count_r = 0;
+	unsigned count_active = 0;
+	
+	data_current = data_l = malloc(sizeof(char*) * 512);
+	data_r = malloc(sizeof(char*) * 512);
+	
 	initscr ();                           //инициализация структуры данных
 	cbreak();                             
 	curs_set (0);                         //отключение курсора мыши
@@ -88,36 +92,55 @@ int main (int argc, char ** argv)
 		
 //Left window
 	win_bl = create_box(22, 57, 2, 4);
-	win_l = create_win(20, 55, 3, 5);
+	win_active = win_l = create_win(20, 55, 3, 5);
 	win_br = create_box(22, 57, 2, 59);
-	win_r = create_win(20, 55, 3, 60);
-                              // vizov okno_2
-	count_l = get_dir(".", win_l, data);
+	win_r = create_win(20, 55, 3, 60);                              // vizov okno_2
+	count_active = count_l = get_dir(".", win_l, data_l);
+	count_r = get_dir("..", win_r, data_r);
 
 	//NAVIGATOR
 	int key = 0;
 	unsigned pline = 0;		//Индекс с которого начинается вывод
 	unsigned  cline = 0;		//Текущая строка в окне(которая выбрана)
+
+	ref_data(data_l, count_l, 0, win_l);
+	ref_data(data_r, count_r, -1, win_r);
 	while((key = getch()) != 27)
 	{
 		switch(key)
 		{
 			case KEY_DOWN:
-				if(cline < count_l - 1)
+				if(cline < count_active - 1)
 					cline++;
-				ref_data(data, count_l, cline, win_l);
+				ref_data(data_current, count_active, cline, win_active);
 			break;
 			case KEY_UP:
 				if(cline > 0)	
 					cline--;
-				ref_data(data, count_l, cline, win_l);
+				ref_data(data_current, count_active, cline, win_active);
 			break;
-			}
-
+			case KEY_LEFT:
+				win_active = win_l;
+				count_active = count_l;
+				cline = 0;
+				data_current = data_l;
+				ref_data(data_r, count_r, -1, win_r);
+				ref_data(data_l, count_l, cline, win_l);
+			break;
+			case KEY_RIGHT: 
+				win_active = win_r;
+				count_active = count_r;
+				cline = 0;
+				data_current = data_r;
+				ref_data(data_l, count_l, -1, win_l);
+				ref_data(data_r, count_r, cline, win_r);
+			break;	
+		}
 	}
+				
 
 	getch ();
 	endwin ();
 	exit (EXIT_SUCCESS);
-}        
+}
 
