@@ -7,6 +7,7 @@
 #include<dirent.h>
 #include<stdio.h>   
 #include <string.h>
+#include<unistd.h>
 
 WINDOW *create_box (int sy, int sx, int py, int px)                             //VIVOD OKNA
 {
@@ -95,8 +96,8 @@ int main (int argc, char ** argv)
 	win_active = win_l = create_win(20, 55, 3, 5);
 	win_br = create_box(22, 57, 2, 59);
 	win_r = create_win(20, 55, 3, 60);                              // vizov okno_2
-	count_active = count_l = get_dir(".", win_l, data_l);
-	count_r = get_dir("..", win_r, data_r);
+	count_active = count_l = get_dir("..", win_l, data_l);
+	count_r = get_dir(".", win_r, data_r);
 
 	//NAVIGATOR
 	int key = 0;
@@ -134,7 +135,18 @@ int main (int argc, char ** argv)
 				data_current = data_r;
 				ref_data(data_l, count_l, -1, win_l);
 				ref_data(data_r, count_r, cline, win_r);
-			break;	
+			break;
+			case 	'\n':
+				if(win_active == win_l)
+				{
+					chdir(data_l[cline]);
+					count_l = get_dir(data_l[cline], win_l, data_l);
+					count_active = count_l;
+					data_current = data_l;
+					
+				}				
+			break;
+
 		}
 	}
 				
